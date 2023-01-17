@@ -2,7 +2,7 @@
 secrets.py
 
 # Linked courses
-link.json
+sync.json
 
 # Compiled Python
 __pycache__/
