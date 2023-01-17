@@ -1,12 +1,11 @@
 [
     {
-        "courseID":"40187",
-        "projectID":"2296732557",
-        "items":
+        "course_id":"42997",
+        "project_id":"2296732557",
+        "posts":
         [
             {
                 "type":"assignment",
-                "sectionID":"",
                 "labels":["Auto", "Assignment"]
             },
             {
