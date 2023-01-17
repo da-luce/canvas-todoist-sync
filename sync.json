@@ -5,27 +5,26 @@
         "items":
         [
             {
-                "type":"Assignment",
-                "sectionID":"wwww",
-                "labels":[],
+                "type":"assignment",
+                "sectionID":"",
+                "labels":["Auto", "Assignment"]
+            },
+            {
+                "type":"quiz",
+                "labels":["Auto", "Quiz"]
+            },
+            {
+                "type":"discussion",
+                "labels":["Auto", "Discussion"],
                 "subtasks":
                 [
                     {
-                        
-                    },
-                    {
-
+                        "content":"Test subtask",
+                        "description":"This is a test task",
+                        "labels":["Test label"],
+                        "due_string":"one day before"
                     }
                 ]
-            },
-            {
-                "type":"Quiz",
-                "sectionID":"Project Section",
-                "labels":[]
-            },
-            {
-                "type":"Discussion",
-                "labels":["Auto"]
             }
         ]
     }

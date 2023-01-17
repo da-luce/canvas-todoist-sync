@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
 from os import path
+from re import sub
+import traceback
 
 from canvasapi import Canvas
 import canvasapi.exceptions
@@ -9,6 +11,8 @@ import canvasapi.quiz
 import canvasapi.discussion_topic
 from todoist_api_python.api import TodoistAPI
 from prettytable import PrettyTable
+from bs4 import BeautifulSoup
+from dateutil import parser
 
 import secrets
 
@@ -42,15 +46,25 @@ print("\nSuccessfully logged into Todoist\n")
 def print_ids():
 
     # Get list of active courses
-    courses = canvas.get_courses(include=['term'], enrollment_state='active')
+    print("Fetching courses...")
+    try:
+        courses = canvas.get_courses(include=['term'], enrollment_state='active')
+    except Exception:
+        traceback.print_exc()
+        return
 
     course_table = PrettyTable(['Course', 'ID'])
     for course in courses:
         course_table.add_row([course.name, str(course.id)])
 
     print(course_table)
-
-    projects = todo.get_projects()
+    
+    print("Fetching projects...")
+    try:
+        projects = todo.get_projects()
+    except Exception:
+        traceback.print_exc()
+        return
 
     project_table = PrettyTable(['Project', 'ID'])
     for project in projects:
@@ -67,6 +81,17 @@ def sizePage(paginatedList):
         c = 0
     return c
 
+def parseTime(canvasTime):
+   
+    if canvasTime is None:
+        return None
+
+    # get datetime object from canavs timestamp in ISO 8601 format (UTC time zone)
+    dt = parser.parse(canvasTime)
+    
+    # Put time in format that Todoist can better understand
+    return dt.strftime("due %m/%d/%Y at %I %p")
+
 def sync():
 
     # Set up link file
@@ -82,25 +107,34 @@ def sync():
         print("You don't appear to have any linked courses")
         quit()
 
+    print("Link file found. Beggining sync...\n")
+
     for link in data:
- 
+
         courseID = link['courseID']
         projectID = link['projectID']
 
+        # Fetch course
+        print("Fetching course with ID '" + courseID + "'...", end='\t\t')
         try:
             course = canvas.get_course(courseID)
-        except Exception as error:
-            print("Error getting course with ID '" + courseID + "'")
-            print(error)
+        except Exception:
+            print("❌ Error getting course")
+            traceback.print_exc()
             continue
+        print("✅ Successfully found course '" + course.name + "'")
 
+        # Fetch project
+        print("Fetching project with ID '" + projectID + "'...", end='\t')
         try:
             project = todo.get_project(project_id=projectID)
-        except:
-            print("Error getting project with ID'" + projectID + "'")
+        except Exception:
+            print("❌ Error getting project")
+            traceback.print_exc()
             continue
+        print("✅ Successfully found project '" + project.name + "'")
 
-        print("Attempting to sync Canvas course '" + course.name + "' with Todoist project '" + project.name + "'")
+        print("\nSyncing '" + course.name + "' with '" + project.name + "'...")
 
         for item in link['items']:
 
@@ -115,23 +149,25 @@ def sync():
 
             # Fetch items from Canvas
             match item['type']:
-                case "Assignment":
+                case "assignment":
                     items = course.get_assignments(bucket = 'unsubmitted')
-                case "Quiz":
+                case "quiz":
                     items = course.get_quizzes()
-                case "Discussion":
+                case "discussion":
                     items = course.get_discussion_topics(scope = "unlocked")
                 case _:
-                    print("\t○ Error: Could not recognize type '" + item['type'] + "'. Type must be Assignment, Quiz, or Discussion")
+                    print("\t❌ Could not recognize type '" + item['type'] + "'. Type must be Assignment, Quiz, or Discussion")
                     continue
 
             itemType = item['type'] 
             if (sizePage(items) == 0):
-                print("\t○ No " + itemType + "s to sync in " + course.name)
+                print("\t✔️ " + itemType.capitalize() + ":\tNo items of type " + itemType + " to sync in " + course.name)
                 continue
-            print("\t○ Syncing " + str(sizePage(items)) + " " + itemType + " in " + course.name + " to " + project.name)
+
+            print("\t🔁 " + itemType.capitalize() + ":\tSyncing " + str(sizePage(items)) + " " + itemType + " in '" + course.name + "' to '" + project.name + "'")
 
             # Create tasks
+            numDups = 0
             for i in items:
 
                 if type(i) == "quiz":
@@ -139,53 +175,120 @@ def sync():
                         continue
 
                 if dup_task(i.id, projectID, sectionID):
+                    numDups += 1
                     continue
 
-                create_task(i, labels, projectID, sectionID)
+                parent_id = create_task(
+                    i,
+                    item.get('project_id'),
+                    item.get('section_id'),
+                    item.get('labels'),
+                    item.get('priority')
+                )
+
+                # Create subtasks if applicable
+                if ('subtasks' in item):
+                    for subtask in item['subtasks']:
+
+                        create_subtask(
+                            subtask.get('content'),
+                            subtask.get('description'), 
+                            parent_id,
+                            subtask.get('labels'),
+                            subtask.get('priority'),
+                            subtask.get('due_string')
+                        )
+
+# Create a subtask
+def create_subtask(content, description, parent_id, labels, priority, due_string):
+
+    # Get due date of parent 
+    try:
+        parent = todo.get_task(task_id=parent_id)
+    except Exception:
+        traceback.print_exc()
+        return
+
+    # If no parent due date, don't set any due date
+    if parent.due is None:
+        parentDue = ""
+        due_string = ""
+    else:
+        parentDue = parent.due.string
+
+    content     = content       or "No name"
+    description = description   or ""
+    labels      = labels        or []
+    priority    = priority      or 1
+    due_string  = due_string    or ""
+
+    try:
+        todo.add_task(
+            content     = content,
+            description = description,
+            parent_id   = parent_id,
+            labels      = labels,
+            priority    = priority,
+            due_string  = due_string + parentDue,
+        )
+    except Exception:
+        traceback.print_exc()
+        return
+
+    print("\t\t\t\t✅ Created subtask '" + content + "'")
+
 
 # Create a task give an assignment, quiz, or dicussion
-def create_task(item, labels=[], projectID=None, sectionID=None):
+def create_task(item, project_id, section_id, labels, priority):
 
     content     = ""
-    due_date    = ""
     description = ""
+    project_id  = project_id or None
+    section_id  = section_id or None
+    labels      = labels or []
+    priority    = priority or 1
+    due_string  = ""
 
     # Switch case due to inconsistent naming in Canvas API
     match type(item):
 
         case canvasapi.assignment.Assignment:
             content     = item.name
-            due_date    = item.due_at
             description = item.description
+            due_string  = item.due_at
         case canvasapi.quiz.Quiz:
             content     = item.title
-            due_date    = item.due_at
             description = item.description
+            due_string  = item.due_at
         case canvasapi.discussion_topic.DiscussionTopic:
             content     = item.title
-            due_date    = item.lock_at
-            description = item.message
+            description = BeautifulSoup(item.message, "html.parser").get_text()
+            due_string  = item.lock_at
         case _:
-            print("\t\tError! " + str(type(item)) + " did not match any types available")
+            print("\t\t\t❌ Error! " + str(type(item)) + " did not match any types available")
+            return
 
     time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     try:
-        todo.add_task(
+        task = todo.add_task(
             content     = content,
-            due_string  = due_date,
+            description = description + "\nAutocreated at " + time + "\nCanvas ID: " + str(item.id),
+            project_id  = project_id,
+            section_id  = section_id,
+            priority    = priority,
+            labels      = labels,
+            due_string  = parseTime(due_string),
             due_lang    = "en",
-            project_id  = projectID,
-            section_id  = sectionID,
-            description = description + "\n\n\n Autocreated at " + time + "\nCanvas ID: " + str(item.id),
-            labels      = labels
         )
     except Exception as error:
-        print("\t\tError creating task for " + str(type(item)) + " '" + content + "'")
+        print("\t\t\t❌ Failed to create task '" + content + "'")
         print(error)
         return
 
-    print("\t\tSuccessfully created task for '" + content + "'!")
+    print("\t\t\t✅ Created task '" + content + "'")
+
+    return task.id, task.due;
 
 # Check for dupilcate get_tasks_sync
 # itemID: ID number of the assignment, quiz, etc...
@@ -205,10 +308,9 @@ def dup_task(itemID, projectID=None, sectionID=None):
 
     for task in tasks:
         if str(itemID) in task.description:
-            print("\t\tDuplicate task found for " + task.content)
+            print("\t\t\tℹ️ Duplicate task found for " + task.content)
             return True
 
     return False
 
-print_ids()
 sync()
