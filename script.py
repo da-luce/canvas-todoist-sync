@@ -1,12 +1,16 @@
-from ctypes import byref
-from canvasapi import Canvas
-import canvasapi
-from todoist_api_python.api import TodoistAPI
-import secrets
 import json
-from prettytable import PrettyTable
-from os import path
 from datetime import datetime
+from os import path
+
+from canvasapi import Canvas
+import canvasapi.exceptions
+import canvasapi.assignment
+import canvasapi.quiz
+import canvasapi.discussion_topic
+from todoist_api_python.api import TodoistAPI
+from prettytable import PrettyTable
+
+import secrets
 
 def truncate(string):
     return string[:10] + "..."
@@ -149,11 +153,11 @@ def create_task(item, labels=[], projectID=None, sectionID=None):
     # Switch case due to inconsistent naming in Canvas API
     match type(item):
 
-        case "Assignment":
+        case canvasapi.assignment.Assignment:
             content     = item.name
             due_date    = item.due_at
             description = item.description
-        case "Quiz":
+        case canvasapi.quiz.Quiz:
             content     = item.title
             due_date    = item.due_at
             description = item.description
