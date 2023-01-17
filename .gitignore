@@ -1,0 +1,8 @@
+# Keys
+secrets.py
+
+# Linked courses
+link.json
+
+# Compiled Python
+__pycache__/

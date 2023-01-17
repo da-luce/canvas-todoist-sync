@@ -1,0 +1,32 @@
+[
+    {
+        "courseID":"40187",
+        "projectID":"2296732557",
+        "items":
+        [
+            {
+                "type":"Assignment",
+                "sectionID":"wwww",
+                "labels":[],
+                "subtasks":
+                [
+                    {
+                        
+                    },
+                    {
+
+                    }
+                ]
+            },
+            {
+                "type":"Quiz",
+                "sectionID":"Project Section",
+                "labels":[]
+            },
+            {
+                "type":"Discussion",
+                "labels":["Auto"]
+            }
+        ]
+    }
+]
