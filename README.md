@@ -1,6 +1,6 @@
 # About
 
-A simple script for adding assignments, quizzes, and discussions from [Canvas](https://www.instructure.com/canvas?domain=canvas/) to [Todoist](https://todoist.com/). Contributions are welcome.
+A simple script for adding assignments, quizzes, and discussions from [Canvas](https://www.instructure.com/canvas?domain=canvas/) to [Todoist](https://todoist.com/). Designed to be felxible and powerful. Contributions are welcome.
 
 # Getting started
 
