@@ -75,5 +75,6 @@ Subtask keys:
 # Notes, Recommendations, and Warnings
 - Add a label such as `Auto` to all automatically created tasks. This makes it easy to filter and delete autocreated tasks
 - Helper functions `printCanvasID` and `printTodoistID` are included for easy determination of course and/or project IDs
+- Autocreated tasks will have an ID of the corresponding post in Canvas in their description. **Do not delete this! This is how the script checks for duplicate/exisiting tasks**
 - ⚠️ Warning: this project is a work in progress, there may be some bugs
 
