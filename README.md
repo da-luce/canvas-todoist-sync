@@ -1,12 +1,12 @@
 # About
 
-A simple script for adding assignments, quizzes, and discussions from [Canvas](https://www.instructure.com/canvas?domain=canvas/) to [Todoist](https://todoist.com/). Designed to be felxible and powerful. Contributions are welcome.
+A simple script for adding assignments, quizzes, and discussions from [Canvas](https://www.instructure.com/canvas?domain=canvas/) to [Todoist](https://todoist.com/). Why? Existing solutions did not provide the flexibility and extensibility that I was looking for. Ideas, feature requests, and contributions are always welcome.
 
 # Getting started
 
 ### Authentication
 
-Create a file `secrets.json` in the same directory as the script. Input your API keys and Canvas URL (your school's Canvas domain, e.g. (https://canvas.cornell.edu/)[https://canvas.cornell.edu/]) as shown:
+Create a file `secrets.json` in the same directory as the script. Input your API keys and Canvas URL (your school's Canvas domain, e.g. [https://canvas.cornell.edu/](https://canvas.cornell.edu/)) as shown:
 
 ```py
 CANVAS_URL = "..."
@@ -52,7 +52,7 @@ Create a file `sync.json` in the same directory as the script. This file contain
     }
 ]
 ```
-### Key explanations
+### Key/Value Descriptions
 
 Primary keys:
 
@@ -74,9 +74,8 @@ Subtask keys:
 
 # Notes, Recommendations, and Warnings
 - Add a label such as `Auto` to all automatically created tasks. This makes it easy to filter and delete autocreated tasks
-- Helper functions `printCanvasID` and `printTodoistID` are included for easy determination of course and/or project IDs
+- Optional helper functions `printCanvasID()` and `printTodoistID()` are included for easy determination of course/project/section IDs. 
 - Autocreated tasks will have an ID of the corresponding post in Canvas in their description. **Do not delete this! This is how the script checks for duplicate/exisiting tasks**
 - Be careful with section IDs. Todoist will place the task in the specified section regardless of the section's project
 - There is currently an issue with creating a task in a recently deleted section. The task will be visible to the API but not the Todoist web or desktop applications. This appears to be an issue with Todoist and not the script
-- ⚠️ Warning: this project is a work in progress, there may be some bugs
-
+- ⚠️ Warning: this project is a work in progress, bugs may be present ⚠️
