@@ -11,6 +11,7 @@ import canvasapi.exceptions
 import canvasapi.assignment
 import canvasapi.quiz
 import canvasapi.discussion_topic
+from requests import delete
 
 from todoist_api_python.api import TodoistAPI
 
@@ -39,7 +40,7 @@ def pushAll():
         project = getProject(project_id)
         if project is None: continue
 
-        print("\nPushing '" + course.name + "' to '" + project.name + "'...")
+        print(f"\nPushing '{course.name}' to '{project.name}'...")
 
         if 'posts' not in link:
             print("Link contains no defined posts to push")
@@ -105,16 +106,16 @@ def getLinkData():
 # Fetch a Canvas course
 def getCourse(course_id):
 
-    print("Fetching course with ID '" + course_id + "'...", end='\t\t')
+    print(f"Fetching course with ID '{course_id}'...", end='\t\t')
 
     try:
         course = canvas.get_course(course_id)
     except Exception:
-        print("❌ Error getting course with ID '" + course_id + "'")
+        print(f"❌ Error getting course with ID '{course_id}'")
         traceback.print_exc()
         return
 
-    print("✅ Successfully found course '" + course.name + "'")
+    print(f"✅ Successfully found course '{course.name}'")
 
     return course
 
@@ -122,16 +123,16 @@ def getCourse(course_id):
 # Fetch a Todoist project
 def getProject(project_id):
 
-    print("Fetching project with ID '" + project_id + "'...", end='\t')
+    print(f"Fetching project with ID '{project_id}'...", end='\t')
 
     try:
         project = todo.get_project(project_id=project_id)
     except Exception:
-        print("❌ Error getting project with ID '" + project_id + "'")
+        print(f"❌ Error getting project with ID '{project_id}'")
         traceback.print_exc()
         return
 
-    print("✅ Successfully found project '" + project.name + "'")
+    print(f"✅ Successfully found project '{project.name}'")
 
     return project
 
@@ -161,15 +162,15 @@ def getPosts(course, type):
             posts = course.get_discussion_topics(scope = "unlocked")
 
         case _:
-            print("\t❌ Could not recognize type '" + type + "'. Type must be Assignment, Quiz, or Discussion")
+            print(f"\t❌ Could not recognize type '{type}'. Type must be Assignment, Quiz, or Discussion")
             return
 
     # If no posts, return empty
     if (sizePage(posts) == 0):
-        print("\t✔️ " + type.capitalize() + ":\tNo items of type " + type + " to sync")
+        print(f"\t✔️ {type.capitalize()} :\tNo items of type {type} to sync")
         return
 
-    print("\t🔁 " + type.capitalize() + ":\tPushing " + str(sizePage(posts)) + " posts of type " + type + " from " + course.name)
+    print(f"\t🔁 {type.capitalize()} :\tPushing {str(sizePage(posts))} post(s) of type {type} from '{course.name}'")
 
     return posts
 
@@ -201,7 +202,7 @@ def createPrimaryTask(post, project_id, section_id, labels, priority):
             description = BeautifulSoup(post.message, "html.parser").get_text()
             due_string  = post.lock_at
         case _:
-            print("\t\t\t❌ Error! " + str(type(post)) + " did not match any types available")
+            print(f"\t\t\t❌ Error! {str(type(post))} did not match any types available")
             return
 
     time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -209,7 +210,7 @@ def createPrimaryTask(post, project_id, section_id, labels, priority):
     try:
         task = todo.add_task(
             content     = content,
-            description = description + "\n`Autocreated " + time + "`\n`Canvas ID: " + str(post.id) + "`",
+            description = description + f"\n`Autocreated {time} `\n`Canvas ID: {str(post.id)}`",
             project_id  = project_id,
             section_id  = section_id,
             priority    = priority,
@@ -218,15 +219,15 @@ def createPrimaryTask(post, project_id, section_id, labels, priority):
             due_lang    = "en",
         )
     except Exception as error:
-        print("\t\t\t❌ Failed to create task '" + content + "'")
+        print(f"\t\t\t❌ Failed to create task '{content}'")
         print(error)
         return
 
     if section_id:
         section_name = todo.get_section(section_id=section_id).name
-        print("\t\t\t✅ Created task '" + content + "' in section " + section_name)
+        print(f"\t\t\t✅ Created task '{content}' in section '{section_name}'")
     else:
-        print("\t\t\t✅ Created task '" + content + "'")
+        print(f"\t\t\t✅ Created task '{content}'")
 
     return task.id
 
@@ -267,7 +268,7 @@ def createSubtask(content, description, parent_id, labels, priority, due_string)
         traceback.print_exc()
         return
 
-    print("\t\t\t\t✅ Created subtask '" + content + "'")
+    print(f"\t\t\t\t✅ Created subtask '{content}'")
 
 
 # Check for dupilcate get_tasks_sync
@@ -288,10 +289,23 @@ def existingTask(post_id, project_id, section_id):
 
     for task in tasks:
         if str(post_id) in task.description:
-            print("\t\t\tℹ️ Existing task found for '" + task.content + "'")
+            print(f"\t\t\tℹ️ Existing task found for '{task.content}'")
             return True
 
     return False
+
+
+# Deletes a task given its ID
+def deleteTask(task_id):
+
+    try:
+        todo.delete_task(task_id=task_id)
+    except:
+        traceback.print_exc()
+        print("Error deleting task")
+        return
+
+    print(f"Successfully deleted task with ID '{task_id}'")
 
 
 # Print IDs for Canvas courses

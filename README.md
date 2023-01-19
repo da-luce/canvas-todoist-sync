@@ -76,5 +76,7 @@ Subtask keys:
 - Add a label such as `Auto` to all automatically created tasks. This makes it easy to filter and delete autocreated tasks
 - Helper functions `printCanvasID` and `printTodoistID` are included for easy determination of course and/or project IDs
 - Autocreated tasks will have an ID of the corresponding post in Canvas in their description. **Do not delete this! This is how the script checks for duplicate/exisiting tasks**
+- Be careful with section IDs. Todoist will place the task in the specified section regardless of the section's project
+- There is currently an issue with creating a task in a recently deleted section. The task will be visible to the API but not the Todoist web or desktop applications. This appears to be an issue with Todoist and not the script
 - ⚠️ Warning: this project is a work in progress, there may be some bugs
 
