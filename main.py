@@ -11,17 +11,22 @@ import canvasapi.exceptions
 import canvasapi.assignment
 import canvasapi.quiz
 import canvasapi.discussion_topic
-from requests import delete
 
 from todoist_api_python.api import TodoistAPI
 
 import secrets
 
 
-# Push items defined in sync.json from Canvas to Todoist (recognizes duplicates) for all courses
-def pushAll():
+def push_all():
 
-    data = getLinkData()
+    """
+
+    Attempts to push all items defined in sync.json from Canvas to Todoist, for all defined courses.
+    Recognizes duplicates by checking for the Canvas item's ID in the task description.
+
+    """
+
+    data = get_link_data()
 
     # Iterate through all links between courses and projects
     for link in data:
@@ -34,10 +39,10 @@ def pushAll():
             print("❌ Error: courseID and/or projectID not found in link")
             continue
 
-        course = getCourse(course_id)
+        course = get_course(course_id)
         if course is None: continue
 
-        project = getProject(project_id)
+        project = get_project(project_id)
         if project is None: continue
 
         print(f"\nPushing '{course.name}' to '{project.name}'...")
@@ -50,18 +55,18 @@ def pushAll():
         for postDefinition in link['posts']:
 
             # Fetch posts from Canvas
-            posts = getPosts(course, postDefinition['type'])
+            posts = get_posts(course, postDefinition['type'])
             if posts is None: continue
 
             # Create tasks
             for post in posts:
 
                 # Ignore if existing task
-                if existingTask(post.id, project_id, postDefinition.get('section_id')):
+                if existing_task(post.id, project_id, postDefinition.get('section_id')):
                     continue
 
                 # Create task
-                parent_id = createPrimaryTask(
+                parent_id = create_primary_task(
                     post,
                     project_id,
                     postDefinition.get('section_id'),
@@ -74,7 +79,7 @@ def pushAll():
 
                     for subtask in postDefinition['subtasks']:
 
-                        createSubtask(
+                        create_subtask(
                             subtask.get('content'),
                             subtask.get('description'), 
                             parent_id,
@@ -84,9 +89,15 @@ def pushAll():
                         )
 
 
-# Retrieve data from sync.json
-def getLinkData():
+def get_link_data():
 
+    """
+
+    Retrieves data from sync.json file.
+
+    :return: a Python dictionary containing the contents of sync.json
+
+    """
     if (not path.exists("sync.json")):
         print("You dont't seem to have a link file. Create link.json in the current directory")
         quit()
@@ -103,8 +114,17 @@ def getLinkData():
     return data
 
 
-# Fetch a Canvas course
-def getCourse(course_id):
+def get_course(course_id):
+
+    """
+
+    Fetchs a Canvas course given its ID
+
+    :param course_id: the five digit identifier of the course
+
+    :return: A canvasapi.course.Course object representing the desired course
+
+    """
 
     print(f"Fetching course with ID '{course_id}'...", end='\t\t')
 
@@ -121,7 +141,7 @@ def getCourse(course_id):
 
 
 # Fetch a Todoist project
-def getProject(project_id):
+def get_project(project_id):
 
     print(f"Fetching project with ID '{project_id}'...", end='\t')
 
@@ -137,8 +157,17 @@ def getProject(project_id):
     return project
 
 
-# Get posts from Canvas course given a canvasapi.course.Course object and a type of post
-def getPosts(course, type):
+def get_posts(course, type):
+
+    """
+
+    Returns 'posts' from a Canvas course
+
+    :param course: A canvasapi.course.Course object representing the desired course_id
+                   (used instead of course_id to help limit API calls)
+    :param type: A string representing the type of course. Can be 'assignment', 'quiz', or 'discussion'
+
+    """
 
     # Use corresponding API for post type
     match type:
@@ -152,7 +181,7 @@ def getPosts(course, type):
             posts = []
             quizzes = course.get_quizzes()
 
-            if sizePage(quizzes) != 0:
+            if size_page(quizzes) != 0:
                 for quiz in quizzes:
                     if not quiz.locked_for_user:
                         posts.append(quiz)
@@ -166,17 +195,29 @@ def getPosts(course, type):
             return
 
     # If no posts, return empty
-    if (sizePage(posts) == 0):
+    if (size_page(posts) == 0):
         print(f"\t✔️ {type.capitalize()} :\tNo items of type {type} to sync")
         return
 
-    print(f"\t🔁 {type.capitalize()} :\tPushing {str(sizePage(posts))} post(s) of type {type} from '{course.name}'")
+    print(f"\t🔁 {type.capitalize()} :\tPushing {str(size_page(posts))} post(s) of type {type} from '{course.name}'")
 
     return posts
 
 
-# Autocreate a task give an assignment, quiz, or dicussion
-def createPrimaryTask(post, project_id, section_id, labels, priority):
+def create_primary_task(post, project_id, section_id, labels, priority):
+
+    """
+
+    Create a task given an assignment, quiz or discussions
+
+    :param post: canvasapi.assignment.Assignment, canvasapi.quiz.Quiz, or canvasapi.discussion_topic.DiscussionTopic object
+    :param project_id: the integer identifier of the project the task will be created in (optional)
+    :param section_id: the integer identifier of the section the task will be created in (optional)
+    :param labels: a list of strings containing labels to be applied to the task (optional)
+    :param priority: an integer value describing the priority of the task (normal - 1, through high - 4) (optional)
+                     note: the API uses priority 1 as normal, while the desltop/mobile/web clients use 4 as normal (reversed)
+
+    """
 
     content     = ""
     description = ""
@@ -215,7 +256,7 @@ def createPrimaryTask(post, project_id, section_id, labels, priority):
             section_id  = section_id,
             priority    = priority,
             labels      = labels,
-            due_string  = parseTime(due_string),
+            due_string  = parse_time(due_string),
             due_lang    = "en",
         )
     except Exception as error:
@@ -232,8 +273,21 @@ def createPrimaryTask(post, project_id, section_id, labels, priority):
     return task.id
 
 
-# Create a subtask under an autogenerated task
-def createSubtask(content, description, parent_id, labels, priority, due_string):
+def create_subtask(content, description, parent_id, labels, priority, due_string):
+
+    """
+
+    Creates a subtask under an autogenerated task
+
+    :param content: the 'name' of the subtask
+    :param description: the description of the subtask
+    :param parent_id: the integer identifier of the parent task (required)
+    :param labels: a list of strings containing labels to be applied to the subtask
+    :param priority: an integer describing the priority of the subtask (see create_primary_task())
+    :param due_string: a string describing when the subtask should be due in relation to the parent task
+                       e.g. a value of 'one day before' makes the subtask due one day before the parent task
+
+    """
 
     # Get due date of parent 
     try:
@@ -271,12 +325,19 @@ def createSubtask(content, description, parent_id, labels, priority, due_string)
     print(f"\t\t\t\t✅ Created subtask '{content}'")
 
 
-# Check for dupilcate get_tasks_sync
-# itemID: ID number of the assignment, quiz, etc...
-# projectID: ID number of Todoist project
-# sectionID: ID number of Todoist section
-# TODO: does supplying both projectID and sectionID break things?
-def existingTask(post_id, project_id, section_id):
+def existing_task(post_id, project_id, section_id):
+
+    """
+
+    Check for duplicate tasks
+
+    :param post_id: the integer identifier of the Canvas post (assignment, quiz, or discussion)
+    :param project_id: the integer identifier of the project to search for tasks in
+    :param section_id: the integer identifier of the section to search for tasks in
+
+    :return: True if a task already exists with the same post_id in its description. Otherwise False
+
+    """
 
     try:
         tasks = todo.get_tasks(project_id=project_id, section_id=section_id)
@@ -295,8 +356,15 @@ def existingTask(post_id, project_id, section_id):
     return False
 
 
-# Deletes a task given its ID
-def deleteTask(task_id):
+def delete_task(task_id):
+
+    """
+
+    Deletes a gven task
+
+    :param task_id: the integer identifier of the task to delete
+
+    """
 
     try:
         todo.delete_task(task_id=task_id)
@@ -308,8 +376,13 @@ def deleteTask(task_id):
     print(f"Successfully deleted task with ID '{task_id}'")
 
 
-# Print IDs for Canvas courses
-def printCanvasID():
+def print_canvas_id():
+
+    """
+
+    Prints the integer identifiers of user's Canvas courses 
+
+    """
 
     print("Fetching courses...")
 
@@ -332,8 +405,13 @@ def printCanvasID():
     print(course_table)
 
 
-# Print IDs for Todoist projects and sections
-def printTodoistID():
+def print_todoist_id():
+
+    """
+
+    Prints integer indentifiers of the user's Todoist projects and their respective sections
+
+    """
 
     print("Fetching projects and sections...\n")
 
@@ -355,8 +433,17 @@ def printTodoistID():
             print("\t" + section.name + ": " + section.id)
 
 
-# Returns size of a PaginatedList (internal class of canvasapi)
-def sizePage(paginatedList):
+def size_page(paginatedList):
+
+    """
+
+    Returns the size of a PaginatedList
+
+    :param paginatedList: a canvasapi.paginated_list.PaginatedList object
+
+    :return: the number of items in the list
+
+    """
 
     count = 0
 
@@ -371,8 +458,13 @@ def sizePage(paginatedList):
     return count
 
 
-# Parse Canvas timestamps to string readable by Todoist's AI
-def parseTime(canvasTime):
+def parse_time(canvasTime):
+
+    """
+
+    Parses Canvas timestamps to a string readable by Todoist's AI
+
+    """
 
     if canvasTime is None:
         return None
@@ -404,6 +496,6 @@ if __name__ == "__main__":
 
     print("Successfully logged into Todoist\n")
 
-    #printCanvasID()
-    #printTodoistID()
-    pushAll()
+    #print_canvas_id()
+    #print_todoist_id()
+    push_all()
