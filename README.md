@@ -20,6 +20,7 @@ Create a file `sync.json` in the same directory as the script. This file contain
 ```json
 [
     {
+        "name":"COURSE 9876",
         "course_id":"12345",
         "project_id":"1234567890",
         "posts":
@@ -55,7 +56,7 @@ Create a file `sync.json` in the same directory as the script. This file contain
 ### Key/Value Descriptions
 
 Primary keys:
-
+- **name:**       purely non functional key - useful for keeping track of courses in file
 - **course_id:**  the ID of the canvas course (required)
 - **project_id:** the ID of the Todoist project (required)
 - **posts:**      list of rules for pushing data (required)
@@ -74,6 +75,7 @@ Subtask keys:
 
 # Notes, Recommendations, and Warnings
 - Add a label such as `Auto` to all automatically created tasks. This makes it easy to filter and delete autocreated tasks
+- Add a key "name" (or likewise) to each link as shown above. This makes it far easier to keep track of what IDs are associated to courses
 - Optional helper functions `printCanvasID()` and `printTodoistID()` are included for easy determination of course/project/section IDs. 
 - Autocreated tasks will have an ID of the corresponding post in Canvas in their description. **Do not delete this! This is how the script checks for duplicate/exisiting tasks**
 - Be careful with section IDs. Todoist will place the task in the specified section regardless of the section's project
