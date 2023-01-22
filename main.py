@@ -102,9 +102,13 @@ def get_link_data():
         print("You dont't seem to have a link file. Create link.json in the current directory")
         quit()
 
-    with open('sync.json', 'r') as f:
-        data = json.load(f)
-        f.close()
+    try:
+        with open('sync.json', 'r') as f:
+            data = json.load(f)
+            f.close()
+    except:
+        print("Error opening sync.json")
+        quit()
 
     if (len(data) == 0):
         print("You don't appear to have any linked courses")
