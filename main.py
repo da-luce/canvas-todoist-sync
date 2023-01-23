@@ -30,6 +30,8 @@ def push_all():
 
     # Iterate through all links between courses and projects
     for link in data:
+ 
+        print("\n")
 
         # Ensure link contains courseID and projectID
         try:
@@ -98,6 +100,7 @@ def get_link_data():
     :return: a Python dictionary containing the contents of sync.json
 
     """
+
     if (not path.exists("sync.json")):
         print("You dont't seem to have a link file. Create link.json in the current directory")
         quit()
@@ -106,15 +109,15 @@ def get_link_data():
         with open('sync.json', 'r') as f:
             data = json.load(f)
             f.close()
-    except:
-        print("Error opening sync.json")
+    except Exception:
+        traceback.print_exc()
         quit()
 
     if (len(data) == 0):
         print("You don't appear to have any linked courses")
         quit()
 
-    print("Link file found. Beggining push...\n")
+    print("Link file found. Begginning sync...\n")
     return data
 
 
@@ -137,7 +140,7 @@ def get_course(course_id):
     except Exception:
         print(f"❌ Error getting course with ID '{course_id}'")
         traceback.print_exc()
-        return
+        return None
 
     print(f"✅ Successfully found course '{course.name}'")
 
@@ -154,7 +157,7 @@ def get_project(project_id):
     except Exception:
         print(f"❌ Error getting project with ID '{project_id}'")
         traceback.print_exc()
-        return
+        return None
 
     print(f"✅ Successfully found project '{project.name}'")
 
@@ -177,15 +180,29 @@ def get_posts(course, type):
     match type:
 
         case "assignment":
-            # Ignore unsubmitted assignments
-            posts = course.get_assignments(bucket = 'unsubmitted')
+            # Get overdue and future assignments
+            # ('unsubmitted does not seem to work')
+            overdue = course.get_assignments(bucket = 'overdue')
+            future = course.get_assignments(bucket = 'future')
+
+            # Change to Python lists
+            overdue = paginated_to_list(overdue)
+            future = paginated_to_list(future)
+
+            total = overdue + future
+            posts = []
+
+            # Filter manually because buckets don't work properlly
+            for assignment in total:
+                if assignment.due_at != None:
+                    posts.append(assignment)
 
         case "quiz":
             # Ignore locked quizzes
             posts = []
-            quizzes = course.get_quizzes()
+            quizzes = paginated_to_list(course.get_quizzes())
 
-            if size_page(quizzes) != 0:
+            if len(quizzes) != 0:
                 for quiz in quizzes:
                     if not quiz.locked_for_user:
                         posts.append(quiz)
@@ -198,12 +215,15 @@ def get_posts(course, type):
             print(f"\t❌ Could not recognize type '{type}'. Type must be Assignment, Quiz, or Discussion")
             return
 
+    # Ensure posts is a list
+    posts = paginated_to_list(posts)
+
     # If no posts, return empty
-    if (size_page(posts) == 0):
+    if (len(posts) == 0):
         print(f"\t✔️ {type.capitalize()} :\tNo items of type {type} to sync")
         return
 
-    print(f"\t🔁 {type.capitalize()} :\tPushing {str(size_page(posts))} post(s) of type {type} from '{course.name}'")
+    print(f"\t🔁 {type.capitalize()} :\tPushing {str(len(posts))} post(s) of type {type} from '{course.name}'")
 
     return posts
 
@@ -244,11 +264,16 @@ def create_primary_task(post, project_id, section_id, labels, priority):
             due_string  = post.due_at
         case canvasapi.discussion_topic.DiscussionTopic:
             content     = post.title
-            description = BeautifulSoup(post.message, "html.parser").get_text()
+            description = post.message
             due_string  = post.lock_at
         case _:
             print(f"\t\t\t❌ Error! {str(type(post))} did not match any types available")
             return
+
+    if description:
+        description = BeautifulSoup(str(description), "html.parser").get_text()
+    else:
+        description = "\n\n"
 
     time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
@@ -437,29 +462,32 @@ def print_todoist_id():
             print("\t" + section.name + ": " + section.id)
 
 
-def size_page(paginatedList):
+def paginated_to_list(paginatedList):
 
     """
 
-    Returns the size of a PaginatedList
+    Returns a Python list of all elements in a canvasapi.paginated_list.PaginatedList object
 
     :param paginatedList: a canvasapi.paginated_list.PaginatedList object
 
-    :return: the number of items in the list
+    :return: a Python list containing all elements in the PaginatedList
 
     """
 
-    count = 0
+    returnList = []
+
+    if paginatedList is None:
+        return returnList
 
     try:
         for i in paginatedList:
-            count += 1
+            returnList.append(i)
 
     # Exception thrown when list is empty
     except canvasapi.exceptions.ResourceDoesNotExist:
-        count = 0
+        pass
 
-    return count
+    return returnList
 
 
 def parse_time(canvasTime):

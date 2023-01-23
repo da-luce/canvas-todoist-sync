@@ -1,0 +1,5 @@
+beautifulsoup4==4.11.1
+canvasapi==3.0.0
+prettytable==3.6.0
+python_dateutil==2.8.2
+todoist_api_python==2.0.2
